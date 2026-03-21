@@ -4,13 +4,23 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import swostikn.com.np.ui.Screen
+import swostikn.com.np.ui.screens.*
 import swostikn.com.np.ui.theme.PDFSummarizerTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,29 +29,60 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PDFSummarizerTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                MainApp()
             }
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun MainApp() {
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    
+    val showBottomBar = currentDestination?.route != Screen.Login.route
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    PDFSummarizerTheme {
-        Greeting("Android")
+    Scaffold(
+        bottomBar = {
+            if (showBottomBar) {
+                NavigationBar {
+                    val items = listOf(
+                        Triple(Screen.Home, "Home", Icons.Default.Home),
+                        Triple(Screen.History, "History", Icons.Default.History),
+                        Triple(Screen.About, "About", Icons.Default.Info),
+                        Triple(Screen.Settings, "Settings", Icons.Default.Settings)
+                    )
+                    items.forEach { (screen, label, icon) ->
+                        NavigationBarItem(
+                            icon = { Icon(icon, contentDescription = label) },
+                            label = { Text(label) },
+                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                            onClick = {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Login.route,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable(Screen.Login.route) { LoginScreen(navController) }
+            composable(Screen.Home.route) { HomeScreen(navController) }
+            composable(Screen.About.route) { AboutScreen(navController) }
+            composable(Screen.History.route) { HistoryScreen(navController) }
+            composable(Screen.Settings.route) { SettingsScreen(navController) }
+        }
     }
 }
